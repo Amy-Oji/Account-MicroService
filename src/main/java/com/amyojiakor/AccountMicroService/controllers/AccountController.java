@@ -1,23 +1,22 @@
 package com.amyojiakor.AccountMicroService.controllers;
 
-import com.amyojiakor.AccountMicroService.models.AccountDto;
+import com.amyojiakor.AccountMicroService.models.payloads.AccountRequest;
+import com.amyojiakor.AccountMicroService.services.AccountService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@RequiredArgsConstructor
 @RestController
-@RequestMapping("account")
+@RequestMapping("api/v1/account")
 public class AccountController {
-
-    @PostMapping("test")
-    public ResponseEntity<?> checkActivate(@RequestBody AccountDto accountDto){
-
-        System.out.println(accountDto.getName());
-
-        return ResponseEntity.ok(new AccountDto(accountDto.getName()));
+    private final AccountService accountService;
+    @PostMapping("create-account")
+    public ResponseEntity<?> checkActivate(@RequestBody AccountRequest accountRequest){
+        return ResponseEntity.ok(accountService.createAccount(accountRequest));
     }
-
 
 }
