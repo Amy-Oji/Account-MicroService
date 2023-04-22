@@ -3,10 +3,12 @@ package com.amyojiakor.AccountMicroService.serviceImplementations;
 import com.amyojiakor.AccountMicroService.models.entities.Account;
 import com.amyojiakor.AccountMicroService.models.payloads.AccountRequest;
 import com.amyojiakor.AccountMicroService.models.payloads.AccountResponse;
+import com.amyojiakor.AccountMicroService.models.payloads.UpdateAccountRequest;
 import com.amyojiakor.AccountMicroService.repositories.AccountRepository;
 import com.amyojiakor.AccountMicroService.services.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -16,8 +18,9 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 public class AccountServiceImplementations implements AccountService {
-    private final AccountRepository accountRepository;
 
+   @Autowired
+    private final AccountRepository accountRepository;
 
     @Override
     public AccountResponse createAccount(AccountRequest accountRequest) {
@@ -32,23 +35,21 @@ public class AccountServiceImplementations implements AccountService {
 
         accountRepository.save(account);
 
-        return new AccountResponse(
-                accountNum,
-                accountRequest.accountName(),
-                accountRequest.accountType(),
-                accountRequest.currencyCode(),
-                account.getAccountBalance()
-        );
+        return mapToAccountResponse(account);
     }
 
     @Override
-    public AccountResponse updateAccount(AccountRequest accountRequest) {
-        return null;
+    public AccountResponse updateAccount(UpdateAccountRequest accountRequest) {
+        var account = accountRepository.findByAccountNumber(accountRequest.accountNumber()).orElseThrow();
+        BeanUtils.copyProperties(accountRequest, account);
+        accountRepository.save(account);
+        return mapToAccountResponse(account);
     }
 
     @Override
     public AccountResponse getAccountDetails(String accountNumber) {
-        return null;
+        var account = accountRepository.findByAccountNumber(accountNumber).orElseThrow();
+        return mapToAccountResponse(account);
     }
 
     private static String generateAccountNumber() {
@@ -60,5 +61,15 @@ public class AccountServiceImplementations implements AccountService {
     private Boolean isUnique(String accountNumber) {
         Optional<Account> bankAccount = accountRepository.findByAccountNumber(accountNumber);
         return bankAccount.isEmpty();
+    }
+
+    private AccountResponse mapToAccountResponse(Account account){
+        return new AccountResponse(
+                account.getAccountNumber(),
+                account.getAccountName(),
+                account.getAccountType(),
+                account.getCurrencyCode(),
+                account.getAccountBalance()
+        );
     }
 }

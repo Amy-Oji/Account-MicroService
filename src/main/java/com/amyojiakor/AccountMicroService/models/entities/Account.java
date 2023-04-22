@@ -14,8 +14,8 @@ public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private java.lang.String accountNumber;
-    private java.lang.String accountName;
+    private String accountNumber;
+    private String accountName;
     @Enumerated(value = EnumType.STRING)
     private AccountType accountType;
     @Enumerated(value = EnumType.STRING)
