@@ -14,11 +14,18 @@ public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String accountNumber;
+
+    private String email;
+
     private String accountName;
+
     @Enumerated(value = EnumType.STRING)
     private AccountType accountType;
+
     @Enumerated(value = EnumType.STRING)
     private CurrencyCode currencyCode;
+
     private BigDecimal accountBalance;
 }

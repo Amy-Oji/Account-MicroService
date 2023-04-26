@@ -3,16 +3,19 @@ package com.amyojiakor.AccountMicroService.controllers;
 import com.amyojiakor.AccountMicroService.models.payloads.AccountRequest;
 import com.amyojiakor.AccountMicroService.models.payloads.UpdateAccountRequest;
 import com.amyojiakor.AccountMicroService.services.AccountService;
+import com.amyojiakor.AccountMicroService.services.serviceImplementations.AccountServiceImplementations;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("api/v1/accounts")
 public class AccountController {
-    private final AccountService accountService;
+    @Autowired
+    private final AccountServiceImplementations accountService;
+
     @PostMapping("create-account")
     public ResponseEntity<?> createAccount(@RequestBody AccountRequest accountRequest){
         return ResponseEntity.ok(accountService.createAccount(accountRequest));

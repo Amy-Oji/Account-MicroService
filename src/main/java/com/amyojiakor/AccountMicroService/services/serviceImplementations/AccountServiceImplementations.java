@@ -1,4 +1,4 @@
-package com.amyojiakor.AccountMicroService.serviceImplementations;
+package com.amyojiakor.AccountMicroService.services.serviceImplementations;
 
 import com.amyojiakor.AccountMicroService.models.entities.Account;
 import com.amyojiakor.AccountMicroService.models.payloads.AccountRequest;
@@ -6,9 +6,10 @@ import com.amyojiakor.AccountMicroService.models.payloads.AccountResponse;
 import com.amyojiakor.AccountMicroService.models.payloads.UpdateAccountRequest;
 import com.amyojiakor.AccountMicroService.repositories.AccountRepository;
 import com.amyojiakor.AccountMicroService.services.AccountService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -16,11 +17,18 @@ import java.util.Optional;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
 public class AccountServiceImplementations implements AccountService {
 
-   @Autowired
     private final AccountRepository accountRepository;
+    private final String accountCreationTopic;
+    private final KafkaTemplate<String, AccountResponse> kafkaTemplate;
+
+    @Autowired
+    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account-creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> kafkaTemplate) {
+        this.accountRepository = accountRepository;
+        this.accountCreationTopic = accountCreationTopic;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Override
     public AccountResponse createAccount(AccountRequest accountRequest) {
@@ -35,7 +43,11 @@ public class AccountServiceImplementations implements AccountService {
 
         accountRepository.save(account);
 
-        return mapToAccountResponse(account);
+        AccountResponse accountResponse = mapToAccountResponse(account);
+
+        kafkaTemplate.send(accountCreationTopic, accountResponse);
+
+        return accountResponse;
     }
 
     @Override
@@ -65,6 +77,7 @@ public class AccountServiceImplementations implements AccountService {
 
     private AccountResponse mapToAccountResponse(Account account){
         return new AccountResponse(
+                account.getEmail(),
                 account.getAccountNumber(),
                 account.getAccountName(),
                 account.getAccountType(),
