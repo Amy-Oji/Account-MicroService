@@ -39,4 +39,8 @@ kafka:
   topic:
     account-creation: account-creation
 
-
+myapp:
+  api:
+    base-url:
+      user-service: http://user-service/api/v1/users/
+      transaction-service: http://transaction-service/api/v1/transactions/

@@ -1,18 +1,27 @@
 package com.amyojiakor.AccountMicroService.services.serviceImplementations;
 
+import com.amyojiakor.AccountMicroService.config.ApiConfig;
 import com.amyojiakor.AccountMicroService.models.entities.Account;
 import com.amyojiakor.AccountMicroService.models.payloads.AccountRequest;
 import com.amyojiakor.AccountMicroService.models.payloads.AccountResponse;
 import com.amyojiakor.AccountMicroService.models.payloads.UpdateAccountRequest;
+import com.amyojiakor.AccountMicroService.models.payloads.UserDetailsResponse;
 import com.amyojiakor.AccountMicroService.repositories.AccountRepository;
 import com.amyojiakor.AccountMicroService.services.AccountService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Random;
 
@@ -22,23 +31,46 @@ public class AccountServiceImplementations implements AccountService {
     private final AccountRepository accountRepository;
     private final String accountCreationTopic;
     private final KafkaTemplate<String, AccountResponse> kafkaTemplate;
+    private final ApiConfig apiConfig;
+    private final RestTemplate restTemplate;
 
     @Autowired
-    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account-creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> kafkaTemplate) {
+    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account-creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> kafkaTemplate, ApiConfig apiConfig, RestTemplate restTemplate) {
         this.accountRepository = accountRepository;
         this.accountCreationTopic = accountCreationTopic;
         this.kafkaTemplate = kafkaTemplate;
+        this.apiConfig = apiConfig;
+        this.restTemplate = restTemplate;
     }
 
+    @Transactional
     @Override
-    public AccountResponse createAccount(AccountRequest accountRequest) {
+    public AccountResponse createAccount(AccountRequest accountRequest, String token) {
+
+        byte[] decodedToken = Base64.getUrlDecoder().decode(token);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(new String(decodedToken));
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<UserDetailsResponse> responseEntity =
+                restTemplate.exchange(
+                        apiConfig.getUserServiceBaseUrl()+"get-user-details",
+                        HttpMethod.GET,
+                        entity,
+                        UserDetailsResponse.class);
+
+        UserDetailsResponse user = responseEntity.getBody();
+        assert user != null;
 
         Account account = new Account();
         BeanUtils.copyProperties(accountRequest, account);
         account.setAccountBalance(BigDecimal.valueOf(0));
+        account.setEmail(user.email());
+        account.setAccountName(user.firstName() + " " + user.lastName());
 
         String accountNum = generateAccountNumber();
         while(!isUnique(accountNum)) accountNum = generateAccountNumber();
+
         account.setAccountNumber(accountNum);
 
         accountRepository.save(account);
@@ -85,4 +117,5 @@ public class AccountServiceImplementations implements AccountService {
                 account.getAccountBalance()
         );
     }
+
 }
