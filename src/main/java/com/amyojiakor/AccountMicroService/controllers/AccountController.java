@@ -28,13 +28,12 @@ public class AccountController {
     }
 
     @PostMapping("update-account")
-    public ResponseEntity<?> updateAccount(@RequestBody UpdateAccountRequest accountRequest){
-        return ResponseEntity.ok(accountService.updateAccount(accountRequest));
+    public ResponseEntity<?> updateAccount(@PathVariable String accountNumber, @RequestBody UpdateAccountRequest accountRequest){
+        return ResponseEntity.ok(accountService.updateAccount(accountNumber, accountRequest));
     }
 
     @GetMapping("/get-account/{accountNumber}")
-    public ResponseEntity<?> getAccountDetails(@PathVariable String accountNumber,  @RequestHeader("Authorization") String token) {
-        System.out.println("Received token: " + token);
+    public ResponseEntity<?> getAccountDetails(@PathVariable String accountNumber) {
         return ResponseEntity.ok(accountService.getAccountDetails(accountNumber));
     }
 

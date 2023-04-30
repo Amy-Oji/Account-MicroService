@@ -6,7 +6,7 @@ import com.amyojiakor.AccountMicroService.models.payloads.UpdateAccountRequest;
 
 public interface AccountService {
     AccountResponse createAccount(AccountRequest accountRequest, String token);
-    AccountResponse updateAccount(UpdateAccountRequest updateAccountRequest);
+    AccountResponse updateAccount(String accountNum, UpdateAccountRequest updateAccountRequest);
     AccountResponse getAccountDetails(String accountNumber);
 
 }

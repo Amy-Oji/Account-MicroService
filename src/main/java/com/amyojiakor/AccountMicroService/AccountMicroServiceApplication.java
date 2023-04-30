@@ -8,7 +8,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@ComponentScan(basePackages = "com.amyojiakor.AccountMicroService") // src/main/java/com/amyojiakor/AccountMicroService
+@ComponentScan(basePackages = "com.amyojiakor.AccountMicroService")
 public class AccountMicroServiceApplication {
 
 	public static void main(String[] args) {

@@ -47,19 +47,7 @@ public class AccountServiceImplementations implements AccountService {
     @Override
     public AccountResponse createAccount(AccountRequest accountRequest, String token) {
 
-        byte[] decodedToken = Base64.getUrlDecoder().decode(token);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(new String(decodedToken));
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        ResponseEntity<UserDetailsResponse> responseEntity =
-                restTemplate.exchange(
-                        apiConfig.getUserServiceBaseUrl()+"get-user-details",
-                        HttpMethod.GET,
-                        entity,
-                        UserDetailsResponse.class);
-
-        UserDetailsResponse user = responseEntity.getBody();
+        UserDetailsResponse user = getUser(token);
         assert user != null;
 
         Account account = new Account();
@@ -83,8 +71,8 @@ public class AccountServiceImplementations implements AccountService {
     }
 
     @Override
-    public AccountResponse updateAccount(UpdateAccountRequest accountRequest) {
-        var account = accountRepository.findByAccountNumber(accountRequest.accountNumber()).orElseThrow();
+    public AccountResponse updateAccount( String accountNum, UpdateAccountRequest accountRequest) {
+        var account = accountRepository.findByAccountNumber(accountNum).orElseThrow();
         BeanUtils.copyProperties(accountRequest, account);
         accountRepository.save(account);
         return mapToAccountResponse(account);
@@ -116,6 +104,22 @@ public class AccountServiceImplementations implements AccountService {
                 account.getCurrencyCode(),
                 account.getAccountBalance()
         );
+    }
+
+    private UserDetailsResponse getUser(String token){
+        byte[] decodedToken = Base64.getUrlDecoder().decode(token);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(new String(decodedToken));
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<UserDetailsResponse> responseEntity =
+                restTemplate.exchange(
+                        apiConfig.getUserServiceBaseUrl()+"get-user-details",
+                        HttpMethod.GET,
+                        entity,
+                        UserDetailsResponse.class);
+
+        return responseEntity.getBody();
     }
 
 }

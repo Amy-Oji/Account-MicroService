@@ -26,7 +26,6 @@ public class KafkaConfig {
     private String groupId;
 
 
-
     @Bean
     public ProducerFactory<String, AccountResponse> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -57,12 +56,5 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory());
         return factory;
     }
-//    @Bean
-//    public MessageConverter userMessageConverter() {
-//        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-//        converter.setTargetType(TrayIcon.MessageType.TEXT);
-//        converter.setTypeIdPropertyName("_type");
-//        return converter;
-//    }
 
 }
