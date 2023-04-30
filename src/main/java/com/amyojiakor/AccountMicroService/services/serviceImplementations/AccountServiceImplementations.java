@@ -2,6 +2,7 @@ package com.amyojiakor.AccountMicroService.services.serviceImplementations;
 
 import com.amyojiakor.AccountMicroService.config.ApiConfig;
 import com.amyojiakor.AccountMicroService.models.entities.Account;
+import com.amyojiakor.AccountMicroService.models.enums.TransactionType;
 import com.amyojiakor.AccountMicroService.models.payloads.*;
 import com.amyojiakor.AccountMicroService.repositories.AccountRepository;
 import com.amyojiakor.AccountMicroService.services.AccountService;
@@ -28,17 +29,23 @@ public class AccountServiceImplementations implements AccountService {
 
     private final AccountRepository accountRepository;
     private final String accountCreationTopic;
-    private final KafkaTemplate<String, AccountResponse> kafkaTemplate;
+
+    private final KafkaTemplate<String, AccountResponse> accountKafkaTemplate;
     private final ApiConfig apiConfig;
     private final RestTemplate restTemplate;
+    private final String balanceUpdateTopic;
+
+    private final KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate;
 
     @Autowired
-    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account.creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> kafkaTemplate, ApiConfig apiConfig, RestTemplate restTemplate) {
+    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account.creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> accountKafkaTemplate, ApiConfig apiConfig, RestTemplate restTemplate, @Value("${kafka.topic.account.balance-update}") String balanceUpdateTopic, KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate) {
         this.accountRepository = accountRepository;
         this.accountCreationTopic = accountCreationTopic;
-        this.kafkaTemplate = kafkaTemplate;
+        this.accountKafkaTemplate = accountKafkaTemplate;
         this.apiConfig = apiConfig;
         this.restTemplate = restTemplate;
+        this.balanceUpdateTopic = balanceUpdateTopic;
+        this.transactionKafkaTemplate = transactionKafkaTemplate;
     }
 
     @Transactional
@@ -63,7 +70,7 @@ public class AccountServiceImplementations implements AccountService {
 
         AccountResponse accountResponse = mapToAccountResponse(account);
 
-        kafkaTemplate.send(accountCreationTopic, accountResponse);
+        accountKafkaTemplate.send(accountCreationTopic, accountResponse);
 
         return accountResponse;
     }
@@ -122,8 +129,28 @@ public class AccountServiceImplementations implements AccountService {
 
     @Transactional
     @KafkaListener(topics = "${kafka.topic.account.transact}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "transactionListenerContainerFactory")
-    public void consume(TransactionMessage transactionMessage) {
-        System.out.println(transactionMessage.toString());
+    public void consume(TransactionMessage transactionMessage) throws Exception {
+        TransactionMessageResponse transactionMessageResponse = processTransaction(transactionMessage);
+        transactionKafkaTemplate.send(balanceUpdateTopic, transactionMessageResponse);
     }
 
+    private TransactionMessageResponse processTransaction(TransactionMessage transactionMessage) throws Exception {
+        TransactionMessageResponse transactionMessageResponse = new TransactionMessageResponse();
+        var account = accountRepository.findByAccountNumber(transactionMessage.accountNum()).orElseThrow();
+        var balance = account.getAccountBalance();
+        if (transactionMessage.transactionType() == TransactionType.CREDIT) {
+            account.setAccountBalance(balance.add(transactionMessage.amount()));
+        } else {
+            if (transactionMessage.amount().compareTo(balance) > 0) {
+                transactionMessageResponse.setTransactionStatus(TransactionStatus.FAILED);
+                transactionMessageResponse.setErrorMessage("Insufficient Funds");
+                throw new Exception("Insufficient Funds");
+            }
+            account.setAccountBalance(balance.subtract(transactionMessage.amount()));
+        }
+        transactionMessageResponse.setTransactionStatus(TransactionStatus.COMPLETED);
+        transactionMessageResponse.setErrorMessage(null);
+        accountRepository.save(account);
+        return transactionMessageResponse;
+    }
 }

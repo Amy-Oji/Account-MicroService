@@ -40,7 +40,7 @@ kafka:
     account:
       creation: account-creation
       transact: transaction-creation
-      balance-update: balance-update
+      balance-update: account-service-balance-update
 
 myapp:
   api:
