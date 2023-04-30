@@ -19,7 +19,7 @@ import java.util.Base64;
 @RequestMapping("api/v1/accounts")
 public class AccountController {
     @Autowired
-    private final AccountServiceImplementations accountService;
+    private final AccountService accountService;
 
     @PostMapping("create-account")
     public ResponseEntity<?> createAccount(@RequestBody AccountRequest accountRequest, @RequestHeader("Authorization") String token){

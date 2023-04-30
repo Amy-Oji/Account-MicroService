@@ -38,9 +38,9 @@ spring:
 kafka:
   topic:
     account:
-    creation: account-creation
-    transact: transaction-creation
-    balance-update: balance-update
+      creation: account-creation
+      transact: transaction-creation
+      balance-update: balance-update
 
 myapp:
   api:

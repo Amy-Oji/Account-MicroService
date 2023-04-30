@@ -2,10 +2,7 @@ package com.amyojiakor.AccountMicroService.services.serviceImplementations;
 
 import com.amyojiakor.AccountMicroService.config.ApiConfig;
 import com.amyojiakor.AccountMicroService.models.entities.Account;
-import com.amyojiakor.AccountMicroService.models.payloads.AccountRequest;
-import com.amyojiakor.AccountMicroService.models.payloads.AccountResponse;
-import com.amyojiakor.AccountMicroService.models.payloads.UpdateAccountRequest;
-import com.amyojiakor.AccountMicroService.models.payloads.UserDetailsResponse;
+import com.amyojiakor.AccountMicroService.models.payloads.*;
 import com.amyojiakor.AccountMicroService.repositories.AccountRepository;
 import com.amyojiakor.AccountMicroService.services.AccountService;
 import jakarta.transaction.Transactional;
@@ -16,6 +13,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -35,7 +33,7 @@ public class AccountServiceImplementations implements AccountService {
     private final RestTemplate restTemplate;
 
     @Autowired
-    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account-creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> kafkaTemplate, ApiConfig apiConfig, RestTemplate restTemplate) {
+    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account.creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> kafkaTemplate, ApiConfig apiConfig, RestTemplate restTemplate) {
         this.accountRepository = accountRepository;
         this.accountCreationTopic = accountCreationTopic;
         this.kafkaTemplate = kafkaTemplate;
@@ -120,6 +118,12 @@ public class AccountServiceImplementations implements AccountService {
                         UserDetailsResponse.class);
 
         return responseEntity.getBody();
+    }
+
+    @Transactional
+    @KafkaListener(topics = "${kafka.topic.account.transact}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "transactionListenerContainerFactory")
+    public void consume(TransactionMessage transactionMessage) {
+        System.out.println(transactionMessage.toString());
     }
 
 }
