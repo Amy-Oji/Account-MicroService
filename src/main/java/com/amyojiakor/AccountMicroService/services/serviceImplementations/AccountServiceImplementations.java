@@ -132,6 +132,7 @@ public class AccountServiceImplementations implements AccountService {
     public void consume(TransactionMessage transactionMessage) throws Exception {
         TransactionMessageResponse transactionMessageResponse = processTransaction(transactionMessage);
         transactionKafkaTemplate.send(balanceUpdateTopic, transactionMessageResponse);
+        System.out.println(transactionMessageResponse);
     }
 
     private TransactionMessageResponse processTransaction(TransactionMessage transactionMessage) throws Exception {
@@ -149,6 +150,8 @@ public class AccountServiceImplementations implements AccountService {
             account.setAccountBalance(balance.subtract(transactionMessage.amount()));
         }
         transactionMessageResponse.setTransactionStatus(TransactionStatus.COMPLETED);
+        transactionMessageResponse.setNewAccountBalance(account.getAccountBalance());
+        transactionMessageResponse.setAccountNum(account.getAccountNumber());
         transactionMessageResponse.setErrorMessage(null);
         accountRepository.save(account);
         return transactionMessageResponse;
