@@ -5,5 +5,5 @@ import com.amyojiakor.AccountMicroService.models.enums.TransactionType;
 
 import java.math.BigDecimal;
 
-public record TransactionMessage(String accountNum, TransactionType transactionType, BigDecimal amount){
+public record TransactionMessage (String sourceAccountNumber, String recipientAccountNumber, TransactionType transactionType, BigDecimal amount, String referenceNumber){
 }

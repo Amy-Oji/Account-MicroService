@@ -130,30 +130,60 @@ public class AccountServiceImplementations implements AccountService {
     @Transactional
     @KafkaListener(topics = "${kafka.topic.account.transact}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "transactionListenerContainerFactory")
     public void consume(TransactionMessage transactionMessage) throws Exception {
-        TransactionMessageResponse transactionMessageResponse = processTransaction(transactionMessage);
-        transactionKafkaTemplate.send(balanceUpdateTopic, transactionMessageResponse);
-        System.out.println(transactionMessageResponse);
+        TransactionMessageResponse response;
+        if(transactionMessage.transactionType().equals(TransactionType.INTERNAL_TRANSFER)){
+            response = processInternalTransfer(transactionMessage);
+            transactionKafkaTemplate.send(balanceUpdateTopic, response);
+            System.out.println(response);
+            System.out.println(response + " ============== in consume 1111");
+        } else {
+        response = processTransaction(transactionMessage);
+        transactionKafkaTemplate.send(balanceUpdateTopic, response);
+        System.out.println(response + " ============== in consume2");
+        }
     }
 
     private TransactionMessageResponse processTransaction(TransactionMessage transactionMessage) throws Exception {
         TransactionMessageResponse transactionMessageResponse = new TransactionMessageResponse();
-        var account = accountRepository.findByAccountNumber(transactionMessage.accountNum()).orElseThrow();
+        var account = accountRepository.findByAccountNumber(transactionMessage.sourceAccountNumber()).orElseThrow();
         var balance = account.getAccountBalance();
         if (transactionMessage.transactionType() == TransactionType.CREDIT) {
             account.setAccountBalance(balance.add(transactionMessage.amount()));
         } else {
             if (transactionMessage.amount().compareTo(balance) > 0) {
-                transactionMessageResponse.setTransactionStatus(TransactionStatus.FAILED);
+                transactionMessageResponse.setStatus(TransactionStatus.FAILED);
                 transactionMessageResponse.setErrorMessage("Insufficient Funds");
                 throw new Exception("Insufficient Funds");
             }
             account.setAccountBalance(balance.subtract(transactionMessage.amount()));
         }
-        transactionMessageResponse.setTransactionStatus(TransactionStatus.COMPLETED);
+        transactionMessageResponse.setStatus(TransactionStatus.COMPLETED);
         transactionMessageResponse.setNewAccountBalance(account.getAccountBalance());
-        transactionMessageResponse.setAccountNum(account.getAccountNumber());
+        transactionMessageResponse.setSourceAccountNumber(account.getAccountNumber());
         transactionMessageResponse.setErrorMessage(null);
         accountRepository.save(account);
         return transactionMessageResponse;
+    }
+
+    private TransactionMessageResponse processInternalTransfer(TransactionMessage transactionMessage) throws Exception {
+
+        TransactionMessageResponse response = new TransactionMessageResponse();
+        BeanUtils.copyProperties(transactionMessage, response);
+
+        var sourceAccount = accountRepository.findByAccountNumber(transactionMessage.sourceAccountNumber()).orElseThrow();
+        var recipientAccount = accountRepository.findByAccountNumber(transactionMessage.recipientAccountNumber()).orElseThrow();
+
+        if (transactionMessage.amount().compareTo(sourceAccount.getAccountBalance()) > 0) {
+            response.setStatus(TransactionStatus.FAILED);
+            throw new Exception("Insufficient Funds");
+        }
+        sourceAccount.setAccountBalance(sourceAccount.getAccountBalance().subtract(transactionMessage.amount()));
+        recipientAccount.setAccountBalance(recipientAccount.getAccountBalance().add(transactionMessage.amount()));
+        response.setStatus(TransactionStatus.COMPLETED);
+        response.setNewAccountBalance(sourceAccount.getAccountBalance());
+        accountRepository.save(sourceAccount);
+        accountRepository.save(recipientAccount);
+        System.out.println(response + "   ================== in processInternalTransfer");
+        return response;
     }
 }
