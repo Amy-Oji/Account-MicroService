@@ -40,6 +40,8 @@ kafka:
     account:
       creation: account-creation
       transact: transaction-creation
+      credit: credit-account
+      credit-response: account-service-credit-response
       balance-update: account-service-balance-update
 
 myapp:
