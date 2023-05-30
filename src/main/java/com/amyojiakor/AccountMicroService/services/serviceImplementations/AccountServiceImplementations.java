@@ -2,6 +2,7 @@ package com.amyojiakor.AccountMicroService.services.serviceImplementations;
 
 import com.amyojiakor.AccountMicroService.config.ApiConfig;
 import com.amyojiakor.AccountMicroService.models.entities.Account;
+import com.amyojiakor.AccountMicroService.models.enums.TransactionStatus;
 import com.amyojiakor.AccountMicroService.models.enums.TransactionType;
 import com.amyojiakor.AccountMicroService.models.payloads.*;
 import com.amyojiakor.AccountMicroService.repositories.AccountRepository;
@@ -34,11 +35,16 @@ public class AccountServiceImplementations implements AccountService {
     private final ApiConfig apiConfig;
     private final RestTemplate restTemplate;
     private final String balanceUpdateTopic;
-
     private final KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate;
 
     @Autowired
-    public AccountServiceImplementations(AccountRepository accountRepository, @Value("${kafka.topic.account.creation}") String accountCreationTopic, KafkaTemplate<String, AccountResponse> accountKafkaTemplate, ApiConfig apiConfig, RestTemplate restTemplate, @Value("${kafka.topic.account.balance-update}") String balanceUpdateTopic, KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate) {
+    public AccountServiceImplementations(AccountRepository accountRepository,
+                                         @Value("${kafka.topic.account.creation}") String accountCreationTopic,
+                                         KafkaTemplate<String, AccountResponse> accountKafkaTemplate,
+                                         ApiConfig apiConfig,
+                                         RestTemplate restTemplate,
+                                         @Value("${kafka.topic.account.balance-update}") String balanceUpdateTopic,
+                                         KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate ) {
         this.accountRepository = accountRepository;
         this.accountCreationTopic = accountCreationTopic;
         this.accountKafkaTemplate = accountKafkaTemplate;
@@ -84,9 +90,9 @@ public class AccountServiceImplementations implements AccountService {
     }
 
     @Override
-    public AccountResponse getAccountDetails(String accountNumber) {
-        var account = accountRepository.findByAccountNumber(accountNumber).orElseThrow();
-        return mapToAccountResponse(account);
+    public AccountDetailsApiResponse getAccountDetails(String accountNumber) throws Exception {
+        var account = accountRepository.findByAccountNumber(accountNumber).orElseThrow(()-> new Exception("Account Not Found"));
+        return new AccountDetailsApiResponse(account.getAccountNumber(), account.getAccountName(), account.getCurrencyCode());
     }
 
     private static String generateAccountNumber() {

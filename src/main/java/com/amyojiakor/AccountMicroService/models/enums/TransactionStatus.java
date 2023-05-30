@@ -1,4 +1,4 @@
-package com.amyojiakor.AccountMicroService.models.payloads;
+package com.amyojiakor.AccountMicroService.models.enums;
 
 public enum TransactionStatus {
     COMPLETED,

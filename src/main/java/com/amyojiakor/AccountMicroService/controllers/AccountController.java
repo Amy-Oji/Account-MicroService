@@ -33,7 +33,7 @@ public class AccountController {
     }
 
     @GetMapping("/get-account/{accountNumber}")
-    public ResponseEntity<?> getAccountDetails(@PathVariable String accountNumber) {
+    public ResponseEntity<?> getAccountDetails(@PathVariable String accountNumber) throws Exception {
         return ResponseEntity.ok(accountService.getAccountDetails(accountNumber));
     }
 
