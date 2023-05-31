@@ -37,6 +37,9 @@ public class AccountServiceImplementations implements AccountService {
     private final String balanceUpdateTopic;
     private final KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate;
 
+    private final String creditAccountTopic;
+    private final KafkaTemplate<String, CreditAccountMessageResponse> creditAccountKafkaTemplate;
+
     @Autowired
     public AccountServiceImplementations(AccountRepository accountRepository,
                                          @Value("${kafka.topic.account.creation}") String accountCreationTopic,
@@ -44,7 +47,10 @@ public class AccountServiceImplementations implements AccountService {
                                          ApiConfig apiConfig,
                                          RestTemplate restTemplate,
                                          @Value("${kafka.topic.account.balance-update}") String balanceUpdateTopic,
-                                         KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate ) {
+                                         KafkaTemplate<String, TransactionMessageResponse> transactionKafkaTemplate,
+                                         @Value("${kafka.topic.account.credit-response}") String creditAccountTopic,
+                                         KafkaTemplate<String, CreditAccountMessageResponse> creditAccountKafkaTemplate
+                                         ) {
         this.accountRepository = accountRepository;
         this.accountCreationTopic = accountCreationTopic;
         this.accountKafkaTemplate = accountKafkaTemplate;
@@ -52,6 +58,8 @@ public class AccountServiceImplementations implements AccountService {
         this.restTemplate = restTemplate;
         this.balanceUpdateTopic = balanceUpdateTopic;
         this.transactionKafkaTemplate = transactionKafkaTemplate;
+        this.creditAccountTopic = creditAccountTopic;
+        this.creditAccountKafkaTemplate = creditAccountKafkaTemplate;
     }
 
     @Transactional
@@ -147,6 +155,35 @@ public class AccountServiceImplementations implements AccountService {
         transactionKafkaTemplate.send(balanceUpdateTopic, response);
         System.out.println(response + " ============== in consume2");
         }
+    }
+
+    @Transactional
+    @KafkaListener(topics = "${kafka.topic.account.credit}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "creditAccountListenerContainerFactory")
+    public void consume(CreditAccountMessage creditAccountMessage) throws Exception {
+
+        System.out.println(creditAccountMessage);
+
+        var creditAccountRes = processCreditAccount(creditAccountMessage);
+
+        creditAccountKafkaTemplate.send(creditAccountTopic, creditAccountRes);
+    }
+
+    @Transactional
+    private CreditAccountMessageResponse processCreditAccount(CreditAccountMessage creditAccountMessage) throws Exception {
+
+        CreditAccountMessageResponse creditAccountMessageResponse = new CreditAccountMessageResponse();
+
+        var account = accountRepository.findByAccountNumber(creditAccountMessage.getRecipientAccountNumber())
+                .orElseThrow(()-> new Exception("account not found"));
+        account.setAccountBalance(account.getAccountBalance().add(creditAccountMessage.getAmount()));
+
+        BeanUtils.copyProperties(creditAccountMessage, creditAccountMessageResponse);
+        creditAccountMessageResponse.setRecipientAccountNumberNewBal(account.getAccountBalance());
+        creditAccountMessageResponse.setStatus(TransactionStatus.COMPLETED);
+
+        accountRepository.save(account);
+
+        return creditAccountMessageResponse;
     }
 
     private TransactionMessageResponse processTransaction(TransactionMessage transactionMessage) throws Exception {

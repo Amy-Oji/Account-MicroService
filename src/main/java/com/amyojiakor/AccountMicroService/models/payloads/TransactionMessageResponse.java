@@ -1,5 +1,6 @@
 package com.amyojiakor.AccountMicroService.models.payloads;
 
+import com.amyojiakor.AccountMicroService.models.enums.TransactionStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
